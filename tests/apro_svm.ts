@@ -114,6 +114,71 @@ describe("apro_svm", () => {
     expect(oracleState.admin.toBase58()).to.equal(admin.publicKey.toBase58());
   });
 
+  it("Adds an oracle successfully", async () => {
+    const admin = Keypair.generate();
+    const oracleStateId = new anchor.BN(5);
+    const requiredSignatures = new anchor.BN(2);
+    const expirationPeriod = new anchor.BN(3600);
+
+    const { oracleStatePda } = await setupOracleState(
+      oracleStateId,
+      requiredSignatures,
+      expirationPeriod,
+      admin,
+    );
+
+    const newOracle = hexToUint8Array(
+      "1234567890123456789012345678901234567890",
+    );
+
+    await program.methods
+      .addOracle(newOracle)
+      .accounts({
+        oracleState: oracleStatePda,
+        admin: admin.publicKey,
+      })
+      .signers([admin])
+      .rpc();
+
+    const updatedOracleState = await program.account.oracleState.fetch(
+      oracleStatePda,
+    );
+    expect(updatedOracleState.totalOracles.toNumber()).to.equal(3);
+    expect(Buffer.from(updatedOracleState.oracles[2]).toString("hex")).to.equal(
+      Buffer.from(newOracle).toString("hex"),
+    );
+  });
+
+  it("Fails to add an existing oracle", async () => {
+    const admin = Keypair.generate();
+    const oracleStateId = new anchor.BN(6);
+    const requiredSignatures = new anchor.BN(2);
+    const expirationPeriod = new anchor.BN(3600);
+
+    const { oracleStatePda } = await setupOracleState(
+      oracleStateId,
+      requiredSignatures,
+      expirationPeriod,
+      admin,
+    );
+
+    const existingOracle = expectedEthAddresses[0];
+
+    try {
+      await program.methods
+        .addOracle(existingOracle)
+        .accounts({
+          oracleState: oracleStatePda,
+          admin: admin.publicKey,
+        })
+        .signers([admin])
+        .rpc();
+      expect.fail("Expected an error but none was thrown");
+    } catch (error) {
+      expect(error.error.errorCode.code).to.equal("OracleAlreadyExists");
+    }
+  });
+
   it("Updates price successfully", async () => {
     const admin = Keypair.generate();
     const oracleStateId = new anchor.BN(2);
@@ -181,10 +246,61 @@ describe("apro_svm", () => {
     expect(Uint8Array.from(priceFeed.extraHash)).to.deep.equal(extraHash);
   });
 
+  it("Fails to update price with mismatched signature and recovery_id lengths", async () => {
+    const admin = Keypair.generate();
+    const oracleStateId = new anchor.BN(7);
+    const requiredSignatures = new anchor.BN(2);
+    const expirationPeriod = new anchor.BN(3600);
+
+    const { oracleStatePda } = await setupOracleState(
+      oracleStateId,
+      requiredSignatures,
+      expirationPeriod,
+      admin,
+    );
+
+    const [priceFeedPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("price_feed"), oracleStatePda.toBuffer(), feedId],
+      program.programId,
+    );
+
+    const mismatchedRecoveryIds = Buffer.from([0]); // Only one recovery ID
+
+    try {
+      await program.methods
+        .updatePrice(
+          feedId,
+          validTimeStamp,
+          observeTimeStamp,
+          nativeFee,
+          aproTokenFee,
+          expireAt,
+          benchmarkPrice,
+          askPrice,
+          bidPrice,
+          configDigest,
+          epochAndRound,
+          extraHash,
+          signatures,
+          mismatchedRecoveryIds,
+        )
+        .accounts({
+          oracleState: oracleStatePda,
+          priceFeed: priceFeedPda,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+      expect.fail("Expected an error but none was thrown");
+    } catch (error) {
+      expect(error.error.errorCode.code).to.equal("ArrayLengthMismatch");
+    }
+  });
+
   it("Fails to update price with insufficient signatures", async () => {
     const admin = Keypair.generate();
-    const oracleStateId = new anchor.BN(3);
-    const requiredSignatures = new anchor.BN(3);
+    const oracleStateId = new anchor.BN(8);
+    const requiredSignatures = new anchor.BN(3); // Require 3 signatures
     const expirationPeriod = new anchor.BN(3600);
 
     const { oracleStatePda } = await setupOracleState(
@@ -214,7 +330,7 @@ describe("apro_svm", () => {
           configDigest,
           epochAndRound,
           extraHash,
-          signatures,
+          signatures, // Only 2 signatures
           recoveryIds,
         )
         .accounts({
@@ -227,6 +343,126 @@ describe("apro_svm", () => {
       expect.fail("Expected an error but none was thrown");
     } catch (error) {
       expect(error.error.errorCode.code).to.equal("InsufficientSignatures");
+    }
+  });
+
+  it("Fails to update price with invalid signatures", async () => {
+    const admin = Keypair.generate();
+    const oracleStateId = new anchor.BN(9);
+    const requiredSignatures = new anchor.BN(2);
+    const expirationPeriod = new anchor.BN(3600);
+
+    const { oracleStatePda } = await setupOracleState(
+      oracleStateId,
+      requiredSignatures,
+      expirationPeriod,
+      admin,
+    );
+
+    const [priceFeedPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("price_feed"), oracleStatePda.toBuffer(), feedId],
+      program.programId,
+    );
+
+    // Create invalid signatures
+    const invalidSignatures = [
+      Buffer.from("0".repeat(128), "hex"),
+      Buffer.from("1".repeat(128), "hex"),
+    ];
+
+    // Use an invalid recovery ID (valid range is 0-3)
+    const invalidRecoveryIds = Buffer.from([4, 5]);
+
+    try {
+      await program.methods
+        .updatePrice(
+          feedId,
+          validTimeStamp,
+          observeTimeStamp,
+          nativeFee,
+          aproTokenFee,
+          expireAt,
+          benchmarkPrice,
+          askPrice,
+          bidPrice,
+          configDigest,
+          epochAndRound,
+          extraHash,
+          invalidSignatures,
+          invalidRecoveryIds,
+        )
+        .accounts({
+          oracleState: oracleStatePda,
+          priceFeed: priceFeedPda,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+      expect.fail("Expected an error but none was thrown");
+    } catch (error) {
+      expect(error.error.errorCode.code).to.equal(
+        "SignatureVerificationFailed",
+      );
+    }
+  });
+
+  it("Fails to update price with insufficient valid signatures", async () => {
+    const admin = Keypair.generate();
+    const oracleStateId = new anchor.BN(29);
+    const requiredSignatures = new anchor.BN(2);
+    const expirationPeriod = new anchor.BN(3600);
+
+    const { oracleStatePda } = await setupOracleState(
+      oracleStateId,
+      requiredSignatures,
+      expirationPeriod,
+      admin,
+    );
+
+    const [priceFeedPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("price_feed"), oracleStatePda.toBuffer(), feedId],
+      program.programId,
+    );
+
+    // Create invalid signatures
+    const invalidSignatures = [
+      Buffer.from("0".repeat(128), "hex"),
+      Buffer.from("1".repeat(128), "hex"),
+    ];
+
+    // Use an invalid recovery ID (valid range is 0-3)
+    const invalidRecoveryIds = Buffer.from([4, 5]);
+
+    try {
+      await program.methods
+        .updatePrice(
+          feedId,
+          validTimeStamp,
+          observeTimeStamp,
+          nativeFee,
+          aproTokenFee,
+          expireAt,
+          benchmarkPrice,
+          askPrice,
+          bidPrice,
+          configDigest,
+          epochAndRound,
+          extraHash,
+          invalidSignatures,
+          invalidRecoveryIds,
+        )
+        .accounts({
+          oracleState: oracleStatePda,
+          priceFeed: priceFeedPda,
+          payer: provider.wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+      expect.fail("Expected an error but none was thrown");
+    } catch (error) {
+      expect(error.error.errorCode.code).to.equal(
+        "SignatureVerificationFailed",
+      );
     }
   });
 
@@ -259,5 +495,35 @@ describe("apro_svm", () => {
     expect(updatedOracleState.admin.toBase58()).to.equal(
       newAdmin.publicKey.toBase58(),
     );
+  });
+
+  it("Fails to update admin with unauthorized user", async () => {
+    const admin = Keypair.generate();
+    const unauthorizedUser = Keypair.generate();
+    const newAdmin = Keypair.generate();
+    const oracleStateId = new anchor.BN(19);
+    const requiredSignatures = new anchor.BN(2);
+    const expirationPeriod = new anchor.BN(3600);
+
+    const { oracleStatePda } = await setupOracleState(
+      oracleStateId,
+      requiredSignatures,
+      expirationPeriod,
+      admin,
+    );
+
+    try {
+      await program.methods
+        .updateAdmin(newAdmin.publicKey)
+        .accounts({
+          oracleState: oracleStatePda,
+          admin: unauthorizedUser.publicKey,
+        })
+        .signers([unauthorizedUser])
+        .rpc();
+      expect.fail("Expected an error but none was thrown");
+    } catch (error) {
+      expect(error.error.errorCode.code).to.equal("UnauthorizedAdmin");
+    }
   });
 });

@@ -6,6 +6,7 @@ skip-lint = false
 
 [programs.localnet]
 apro_svm = "AfeSbLSZ8zMVTVBj4ALAHAbE6VnfM6s9ThcWETKKotkq"
+oracle_client_example = "GzWu85MdbZtVBDcC4Xrmp1dWix7Qo52nUAkD2FjraJ6f"
 
 [registry]
 url = "https://api.apr.dev"
