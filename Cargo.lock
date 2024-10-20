@@ -1183,6 +1183,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oracle_consumer_example"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "apro_svm",
+]
+
+[[package]]
 name = "oracle_sdk"
 version = "0.1.0"
 dependencies = [
