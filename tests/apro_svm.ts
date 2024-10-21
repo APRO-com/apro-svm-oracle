@@ -218,6 +218,7 @@ describe("apro_svm", () => {
         oracleState: oracleStatePda,
         priceFeed: priceFeedPda,
         payer: provider.wallet.publicKey,
+        admin: admin.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc();
@@ -288,6 +289,7 @@ describe("apro_svm", () => {
           oracleState: oracleStatePda,
           priceFeed: priceFeedPda,
           payer: provider.wallet.publicKey,
+          admin: admin.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
@@ -337,6 +339,7 @@ describe("apro_svm", () => {
           oracleState: oracleStatePda,
           priceFeed: priceFeedPda,
           payer: provider.wallet.publicKey,
+          admin: admin.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
@@ -395,6 +398,7 @@ describe("apro_svm", () => {
           oracleState: oracleStatePda,
           priceFeed: priceFeedPda,
           payer: provider.wallet.publicKey,
+          admin: admin.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
@@ -455,6 +459,7 @@ describe("apro_svm", () => {
           oracleState: oracleStatePda,
           priceFeed: priceFeedPda,
           payer: provider.wallet.publicKey,
+          admin: admin.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();

@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
     keccak::hash as keccak_hash, msg, secp256k1_recover::secp256k1_recover,
 };
+use anchor_lang::system_program;
 use ethabi::{encode, Token};
 
 #[event]
@@ -28,6 +29,7 @@ pub struct UpdatePrice<'info> {
     #[account(
         seeds = [b"oracle_state", oracle_state.id.to_le_bytes().as_ref()],
         bump,
+        has_one = admin,
     )]
     pub oracle_state: Account<'info, OracleState>,
     #[account(
@@ -44,6 +46,8 @@ pub struct UpdatePrice<'info> {
     pub price_feed: Account<'info, PriceFeed>,
     #[account(mut)]
     pub payer: Signer<'info>,
+    #[account(mut)]
+    pub admin: SystemAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -66,6 +70,18 @@ pub fn handler(
 ) -> Result<()> {
     let oracle_state = &ctx.accounts.oracle_state;
     let price_feed = &mut ctx.accounts.price_feed;
+    let fee_amount = 1000000;
+
+    system_program::transfer(
+        CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.payer.to_account_info(),
+                to: ctx.accounts.admin.to_account_info(),
+            },
+        ),
+        fee_amount,
+    )?;
 
     require!(
         signatures.len() == recovery_ids.len(),
