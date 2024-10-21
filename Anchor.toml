@@ -14,7 +14,7 @@ url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "/Users/geyunlong/.config/solana/id.json"
+wallet = "~/.config/solana/id.json"
 
 [scripts]
 e2e = "ts-node e2e/integration.ts"
