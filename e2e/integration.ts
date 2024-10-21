@@ -225,7 +225,7 @@ async function main() {
             systemProgram: anchor.web3.SystemProgram.programId,
         })
         .instruction();
-    // insert preInstruction in user's transaction
+    // insert preInstruction in user's transaction and call
     await consumer_program.methods
         .fetchPrice(feedId)
         .preInstructions([preInstruction])
