@@ -46,3 +46,17 @@ To run the tests, use:
 ```bash
 anchor test
 ```
+
+### E2E Integration
+
+To run the E2E tests, start the local validator firstly:
+
+```bash
+anchor localnet
+```
+
+Then run the E2E tests:
+
+```bash 
+anchor run e2e
+```
