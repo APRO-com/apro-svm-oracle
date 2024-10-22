@@ -7,7 +7,6 @@ skip-lint = false
 [programs.localnet]
 apro_svm = "AfeSbLSZ8zMVTVBj4ALAHAbE6VnfM6s9ThcWETKKotkq"
 oracle_client_example = "GzWu85MdbZtVBDcC4Xrmp1dWix7Qo52nUAkD2FjraJ6f"
-oracle_consumer_example = "GuU7g6tNQnZ9bzsC3VMzGd9SLrqd6gaJke7bzjSgFzkH"
 
 [registry]
 url = "https://api.apr.dev"
@@ -17,5 +16,4 @@ cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-e2e = "ts-node e2e/integration.ts"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

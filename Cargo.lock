@@ -1178,16 +1178,7 @@ name = "oracle_client_example"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
- "byteorder",
  "oracle_sdk",
-]
-
-[[package]]
-name = "oracle_consumer_example"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "apro_svm",
 ]
 
 [[package]]
